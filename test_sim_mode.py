@@ -7,6 +7,8 @@ import asyncio
 import json
 import sys
 import time
+import traceback
+
 import websockets
 
 WS_URL = "ws://localhost:8765"
@@ -206,8 +208,8 @@ async def test():
             top_joints = telem.get("joints", [])
             if top_joints and fj:
                 diffs2 = [abs(top_joints[i] - fj[i]) for i in range(min(3, len(top_joints), len(fj)))]
-                assert max(diffs2) < 2.0, f"Top-level joints should match follower"
-                print(f"  [PASS] Top-level joints match follower")
+                assert max(diffs2) < 2.0, "Top-level joints should match follower"
+                print("  [PASS] Top-level joints match follower")
 
             # Check gripper propagation
             lg = leader.get("gripper")
@@ -222,7 +224,7 @@ async def test():
             await expect_type("status")
         except Exception as e:
             print(f"  [FAIL] {e}")
-            import traceback; traceback.print_exc()
+            traceback.print_exc()
             results.append(("Teleop leader->follower", "FAIL"))
             try:
                 await send("stop_teleop")
@@ -269,7 +271,7 @@ async def test():
             await expect_type("status")
         except Exception as e:
             print(f"  [FAIL] {e}")
-            import traceback; traceback.print_exc()
+            traceback.print_exc()
             results.append(("Recording during teleop", "FAIL"))
             try:
                 await send("stop_teleop")

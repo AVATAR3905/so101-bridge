@@ -9,7 +9,6 @@ Starts:
 import asyncio
 import json
 import logging
-import signal
 import sys
 import threading
 import time
@@ -17,7 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 import websockets
-from websockets import serve as ws_serve
+
 # websockets v14+ uses ServerConnection; v12/v13 used WebSocketServerProtocol.
 # Support both by aliasing at import time.
 try:
@@ -28,18 +27,26 @@ except ImportError:
     except ImportError:
         _WSConn = object  # type: ignore
 
+import mjpeg_server as mjpeg
 from arm_controller import ArmController
-from calibrate_limits import (build_bus, go_home, find_limit, find_gripper_limits,
-                               ticks_to_deg, deg_to_ticks, load_config as load_cal_cfg,
-                               save_config as save_cal_cfg)
+from calibrate_limits import (
+    build_bus,
+    deg_to_ticks,
+    find_gripper_limits,
+    find_limit,
+    go_home,
+    ticks_to_deg,
+)
+from calibrate_limits import load_config as load_cal_cfg
+from calibrate_limits import save_config as save_cal_cfg
 from camera_manager import CameraManager
-from episode_recorder import EpisodeRecorder
 from config import Config
-from hand_tracking import HandTracker, set_model_path as set_hand_model_path
+from episode_recorder import EpisodeRecorder
+from hand_tracking import HandTracker
+from hand_tracking import set_model_path as set_hand_model_path
 from head_tracking import HeadTracker
 from ik_solver import solve_ik
 from voice_control import VoiceController
-import mjpeg_server as mjpeg
 
 try:
     from sim_backend import SimArmController as _SimAC
@@ -64,19 +71,19 @@ logging.basicConfig(
 log = logging.getLogger("bridge")
 
 cfg = Config()
-arm: Optional[ArmController] = None
-leader_arm: Optional[ArmController] = None
-follower_arm: Optional[ArmController] = None
-cams: Optional[CameraManager] = None
-recorder: Optional[EpisodeRecorder] = None
-teleop: Optional["TeleopController"] = None
-hand_tracker: Optional[HandTracker] = None
-head_tracker: Optional[HeadTracker] = None
-voice_controller: Optional[VoiceController] = None
+arm: ArmController | None = None
+leader_arm: ArmController | None = None
+follower_arm: ArmController | None = None
+cams: CameraManager | None = None
+recorder: EpisodeRecorder | None = None
+teleop: Optional["TeleopController"] = None  # noqa: F821
+hand_tracker: HandTracker | None = None
+head_tracker: HeadTracker | None = None
+voice_controller: VoiceController | None = None
 ik_active: bool = False
 connected_clients: set = set()
 _cal_stop: threading.Event = threading.Event()
-_loop: Optional[asyncio.AbstractEventLoop] = None
+_loop: asyncio.AbstractEventLoop | None = None
 
 
 def _get_sim_camera_callback():
@@ -302,7 +309,6 @@ async def handle_message(ws, raw: str):
                 teleop = _TeleopCtl(leader_arm, follower_arm, cfg)
                 teleop.start()
 
-            both_hw = cfg.SIM_MODE is None and not use_sim_leader and not use_sim_follower
             await broadcast({
                 "type": "status", "connected": True,
                 "leader_connected": True, "follower_connected": True,

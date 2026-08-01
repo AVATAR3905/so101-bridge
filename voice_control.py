@@ -3,9 +3,8 @@ Voice control for SO-101 using sounddevice + whisper.
 Push-to-talk: press → stream audio to buffer, release → transcribe + execute.
 """
 import logging
-import threading
-import time
-from typing import Callable, Optional
+from collections.abc import Callable
+
 import numpy as np
 
 log = logging.getLogger(__name__)
@@ -41,7 +40,7 @@ _COMMAND_MAP = {
 class VoiceController:
     """Push-to-talk: start_recording() buffers audio, stop_and_process() transcribes + executes."""
 
-    def __init__(self, sample_rate: Optional[int] = None):
+    def __init__(self, sample_rate: int | None = None):
         if sample_rate is None and _SD_AVAILABLE:
             try:
                 sample_rate = int(sd.query_devices(kind='input')['default_samplerate'])
@@ -50,10 +49,10 @@ class VoiceController:
         elif sample_rate is None:
             sample_rate = 16000
         self._sample_rate = sample_rate
-        self._model: Optional[object] = None
-        self._command_callback: Optional[Callable] = None
+        self._model: object | None = None
+        self._command_callback: Callable | None = None
         self._recording = False
-        self._stream: Optional[object] = None
+        self._stream: object | None = None
         self._buffer: list[np.ndarray] = []
 
     def set_command_callback(self, cb: Callable):
@@ -113,7 +112,7 @@ class VoiceController:
             log.error("Failed to start audio stream: %s", e)
             self._recording = False
 
-    def stop_and_process(self) -> Optional[str]:
+    def stop_and_process(self) -> str | None:
         """Stop recording, transcribe buffer, execute command. Returns recognized text."""
         self._recording = False
         if self._stream:
@@ -136,7 +135,7 @@ class VoiceController:
             log.info("No speech detected")
         return text
 
-    def _transcribe(self, audio: np.ndarray) -> Optional[str]:
+    def _transcribe(self, audio: np.ndarray) -> str | None:
         if self._model:
             try:
                 result = self._model.transcribe(audio, language="en")

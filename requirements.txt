@@ -16,6 +16,13 @@ numpy>=1.26.0
 # Feetech servo SDK (hardware communication layer used by lerobot)
 feetech-servo-sdk==1.0.0
 
+# MediaPipe hand/head tracking
+mediapipe>=0.10.0
+
+# Voice control
+sounddevice>=0.4.6
+openai-whisper>=20250625
+
 # lerobot is expected to already be installed.
 # If not: pip install lerobot  (or: pip install git+https://github.com/huggingface/lerobot.git)
 # lerobot

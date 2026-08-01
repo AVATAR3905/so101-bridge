@@ -7,8 +7,8 @@ import logging
 import threading
 import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 import numpy as np
 
@@ -21,7 +21,6 @@ try:
     from mediapipe.tasks.python.vision import (
         HandLandmarker,
         HandLandmarkerOptions,
-        HandLandmarkerResult,
         RunningMode,
     )
     _MEDIAPIPE_AVAILABLE = True
@@ -54,16 +53,16 @@ class HandTracker:
         self._height = height
 
         self._running = False
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._pose = HandPose()
         self._pose_lock = threading.Lock()
 
-        self._frame: Optional[np.ndarray] = None
+        self._frame: np.ndarray | None = None
         self._frame_lock = threading.Lock()
 
-        self._arm_callback: Optional[Callable] = None
+        self._arm_callback: Callable | None = None
         self._smooth = deque(maxlen=4)
-        self._z_ref: Optional[float] = None
+        self._z_ref: float | None = None
 
     def set_arm_callback(self, cb: Callable):
         self._arm_callback = cb
@@ -77,7 +76,7 @@ class HandTracker:
         with self._pose_lock:
             return self._pose
 
-    def get_frame(self) -> Optional[np.ndarray]:
+    def get_frame(self) -> np.ndarray | None:
         with self._frame_lock:
             return self._frame.copy() if self._frame is not None else None
 
@@ -163,8 +162,8 @@ class HandTracker:
                         pt1 = (int(lm[conn[0]].x * w), int(lm[conn[0]].y * h))
                         pt2 = (int(lm[conn[1]].x * w), int(lm[conn[1]].y * h))
                         cv2.line(frame, pt1, pt2, (100, 200, 100), 2)
-                    for i, l in enumerate(lm):
-                        cx, cy = int(l.x * w), int(l.y * h)
+                    for i, lm_pt in enumerate(lm):
+                        cx, cy = int(lm_pt.x * w), int(lm_pt.y * h)
                         cv2.circle(frame, (cx, cy), 4, (0, 255, 0), -1)
                         if i in (0, 4, 8):
                             cv2.circle(frame, (cx, cy), 6, (0, 200, 255), -1)

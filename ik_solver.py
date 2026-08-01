@@ -2,8 +2,9 @@
 Inverse Kinematics solver for SO-101 using damped least squares (Levenberg-Marquardt).
 Finds joint angles to reach a target (x, y) position.
 """
-import math
 import logging
+import math
+
 import numpy as np
 
 log = logging.getLogger(__name__)
@@ -27,8 +28,6 @@ def _jacobian_numerical(joints_deg):
     """Compute 2x4 Jacobian (dx/dq, dy/dq) numerically for planar IK."""
     eps = 0.001
     J = np.zeros((2, 4))
-    base = fk_3d(joints_deg)
-    bx, by = base["x"], base["y"]
     for i in range(4):
         jp = list(joints_deg); jp[i] += eps
         jm = list(joints_deg); jm[i] -= eps

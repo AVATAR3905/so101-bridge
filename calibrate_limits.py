@@ -15,8 +15,8 @@ Usage:
 import argparse
 import json
 import sys
-import time
 import threading
+import time
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -291,7 +291,7 @@ def main():
         print(f"    → Range: [{lo_deg}°, {hi_deg}°]  ticks=[{lo}, {hi}]")
         results[jname] = {"min_deg": lo_deg, "max_deg": hi_deg, "min_ticks": lo, "max_ticks": hi}
         if jid == 1:
-            print(f"    → Leaving shoulder lift at max position")
+            print("    → Leaving shoulder lift at max position")
             bus.write("Goal_Position", "j1", hi, normalize=False)
             time.sleep(1.5)
     if args.only_joint is None:
@@ -315,7 +315,7 @@ def main():
     for jname, r in results.items():
         print(f"  {jname:15s}  [{r['min_deg']:4.0f}°, {r['max_deg']:4.0f}°]")
     print(f"  {'Gripper':15s}  open={gripper_open}  close={gripper_closed}")
-    print(f"\n  Restart the bridge, then use the GUI.")
+    print("\n  Restart the bridge, then use the GUI.")
 
 
 if __name__ == "__main__":

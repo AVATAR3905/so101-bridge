@@ -7,7 +7,6 @@ import base64
 import logging
 import threading
 import time
-from typing import Optional
 
 import numpy as np
 
@@ -34,9 +33,9 @@ class CameraStream:
         self._sim_frame_callback = sim_frame_callback
 
         self._cap = None
-        self._frame: Optional[np.ndarray] = None
+        self._frame: np.ndarray | None = None
         self._lock = threading.Lock()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._running = False
         self._frame_count = 0
         self._t_start = 0.0
@@ -115,11 +114,11 @@ class CameraStream:
                 self._frame_count += 1
             time.sleep(1.0 / self.fps)
 
-    def get_frame(self) -> Optional[np.ndarray]:
+    def get_frame(self) -> np.ndarray | None:
         with self._lock:
             return self._frame.copy() if self._frame is not None else None
 
-    def get_jpeg_b64(self, quality: int = 70) -> Optional[str]:
+    def get_jpeg_b64(self, quality: int = 70) -> str | None:
         """Return the latest frame as a base64-encoded JPEG string."""
         frame = self.get_frame()
         if frame is None:
@@ -165,14 +164,14 @@ class CameraManager:
         for s in self._streams.values():
             s.stop()
 
-    def get_frame(self, device_id: int) -> Optional[np.ndarray]:
+    def get_frame(self, device_id: int) -> np.ndarray | None:
         s = self._streams.get(device_id)
         return s.get_frame() if s else None
 
-    def get_all_frames(self) -> dict[int, Optional[np.ndarray]]:
+    def get_all_frames(self) -> dict[int, np.ndarray | None]:
         return {dev: s.get_frame() for dev, s in self._streams.items()}
 
-    def get_jpeg_b64(self, device_id: int, quality: int = 70) -> Optional[str]:
+    def get_jpeg_b64(self, device_id: int, quality: int = 70) -> str | None:
         s = self._streams.get(device_id)
         return s.get_jpeg_b64(quality) if s else None
 

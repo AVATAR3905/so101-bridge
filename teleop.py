@@ -7,7 +7,6 @@ and reports both states for telemetry and recording.
 import logging
 import threading
 import time
-from typing import Optional
 
 log = logging.getLogger("teleop")
 
@@ -20,7 +19,7 @@ class TeleopController:
         self.follower = follower
         self.cfg = config
         self._running = False
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._leader_state = None
         self._follower_state = None
         self._lock = threading.Lock()

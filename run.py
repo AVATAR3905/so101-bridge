@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Start the bridge with dialout group access."""
 import os
-import sys
 import subprocess
 
 venv = os.path.expanduser("~/Downloads/so101-bridge/.venv/bin/python3")

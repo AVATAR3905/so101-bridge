@@ -6,6 +6,8 @@ Web GUI + control bridge for the SO-101 robot arm (5-DOF + gripper), running ove
 
 A full-stack control system for the SO-101 arm built on lerobot. Drive joints from the browser, teleoperate with a leader arm, record/replay episodes, or control it with camera-based hand tracking — all from one GUI.
 
+![GUI](assets/gui.png)
+
 ## Features
 
 - **Joint control** — live sliders, kinematics visualization, e-stop, home/zero

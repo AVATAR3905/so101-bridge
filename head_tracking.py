@@ -2,10 +2,13 @@
 Head tracking for controlling the SO-101 arm via webcam.
 Uses MediaPipe FaceLandmarker to track nose position and map to arm joints.
 """
-import logging, threading, time
+import logging
+import threading
+import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
+
 import numpy as np
 
 log = logging.getLogger(__name__)
@@ -15,7 +18,9 @@ try:
     import mediapipe as mp
     from mediapipe.tasks.python import BaseOptions
     from mediapipe.tasks.python.vision import (
-        FaceLandmarker, FaceLandmarkerOptions, RunningMode,
+        FaceLandmarker,
+        FaceLandmarkerOptions,
+        RunningMode,
     )
     _MP_AVAILABLE = True
 except ImportError:
@@ -37,10 +42,10 @@ class HeadPose:
 class HeadTracker:
     def __init__(self, camera_id: int = 0, width: int = 640, height: int = 480):
         self._camera_id = camera_id; self._width = width; self._height = height
-        self._running = False; self._thread: Optional[threading.Thread] = None
+        self._running = False; self._thread: threading.Thread | None = None
         self._pose = HeadPose(); self._pose_lock = threading.Lock()
-        self._frame: Optional[np.ndarray] = None; self._frame_lock = threading.Lock()
-        self._arm_callback: Optional[Callable] = None
+        self._frame: np.ndarray | None = None; self._frame_lock = threading.Lock()
+        self._arm_callback: Callable | None = None
         self._smooth = deque(maxlen=4)
 
     def set_arm_callback(self, cb: Callable): self._arm_callback = cb
@@ -49,7 +54,7 @@ class HeadTracker:
     @property
     def latest_pose(self) -> HeadPose:
         with self._pose_lock: return self._pose
-    def get_frame(self) -> Optional[np.ndarray]:
+    def get_frame(self) -> np.ndarray | None:
         with self._frame_lock: return self._frame.copy() if self._frame is not None else None
 
     def start(self) -> bool:

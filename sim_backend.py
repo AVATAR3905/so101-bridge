@@ -9,7 +9,6 @@ import math
 import threading
 import time
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -44,11 +43,11 @@ class SimArmController:
     def __init__(self, port: str = "/dev/ttyACM0", baud: int = 1000000, config=None, role=None):
         self.cfg = config
         self._role = role
-        self._model: Optional["mujoco.MjModel"] = None
-        self._data: Optional["mujoco.MjData"] = None
-        self._renderer: Optional["mujoco.Renderer"] = None
+        self._model: mujoco.MjModel | None = None
+        self._data: mujoco.MjData | None = None
+        self._renderer: mujoco.Renderer | None = None
         self._viewer = None
-        self._viewer_thread: Optional[threading.Thread] = None
+        self._viewer_thread: threading.Thread | None = None
         self._running = False
         self._connected = False
         self._sim = True
@@ -233,7 +232,7 @@ class SimArmController:
     def save_calibration(self, path: str):
         pass
 
-    def render_frame(self, camera_name: str, width: int, height: int) -> Optional[np.ndarray]:
+    def render_frame(self, camera_name: str, width: int, height: int) -> np.ndarray | None:
         if not _MUJOCO_OK:
             return None
         with self._lock:

@@ -1,0 +1,31 @@
+[project]
+name = "so101-bridge"
+version = "1.0.0"
+description = "Web GUI + control bridge for the SO-101 robot arm"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "websockets>=12.0",
+    "aiohttp>=3.9.0",
+    "opencv-python-headless>=4.9.0",
+    "numpy>=1.26.0",
+    "feetech-servo-sdk==1.0.0",
+    "mediapipe>=0.10.0",
+    "sounddevice>=0.4.6",
+    "openai-whisper>=20250625",
+]
+
+[project.scripts]
+so101-bridge = "server:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501", "E701", "E702"]
+
+[tool.ruff.format]
+quote-style = "double"

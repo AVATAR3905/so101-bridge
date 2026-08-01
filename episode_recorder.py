@@ -14,7 +14,6 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Optional
 
 log = logging.getLogger("recorder")
 
@@ -41,7 +40,7 @@ class EpisodeRecorder:
         self._ep_dir = self.output_dir / name
         self._frames_dir = self._ep_dir / "frames"
         self._frames: list[dict] = []
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._running = False
         self._t_start: float = 0.0
         self._lock = threading.Lock()

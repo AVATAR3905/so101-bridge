@@ -25,9 +25,12 @@ CONFIG_PATH = HERE / "config.json"
 try:
     from lerobot.motors.feetech import FeetechMotorsBus
     from lerobot.motors.motors_bus import Motor, MotorNormMode
+    _LEROBOT_OK = True
 except ImportError:
-    print("ERROR: lerobot not available. Activate your venv first.")
-    sys.exit(1)
+    _LEROBOT_OK = False
+    FeetechMotorsBus = None
+    Motor = None
+    MotorNormMode = None
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -56,6 +59,8 @@ def save_config(cfg: dict):
 
 
 def build_bus(port: str):
+    if not _LEROBOT_OK:
+        raise RuntimeError("lerobot not available. Install lerobot (or activate your venv) first.")
     norm = MotorNormMode.RANGE_M100_100
     motors = {f"j{i}": Motor(i + 1, "sts3215", norm) for i in range(6)}
     bus = FeetechMotorsBus(port=port, motors=motors)

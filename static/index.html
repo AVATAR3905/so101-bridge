@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SO-101 Control GUI</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1117; --surface: #161b22; --surface2: #21262d;
+  --border: #30363d; --text: #e6edf3; --muted: #7d8590;
+  --accent: #1D9E75; --accent-dim: #0F6E56;
+  --warn: #d29922; --danger: #da3633; --info: #388bfd;
+  --radius: 8px;
+}
+body { font-family: 'Courier New', monospace; background: var(--bg); color: var(--text); min-height: 100vh; }
+.app { max-width: 1400px; margin: 0 auto; padding: 16px; }
+
+/* Topbar */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+.logo { font-size: 14px; font-weight: 700; letter-spacing: 3px; color: var(--accent); }
+.status-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.dot.warn { background: var(--warn); animation: pulse 1.5s infinite; }
+.dot.off { background: var(--muted); animation: none; }
+.dot.live { animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+.status-text { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+.badge { font-size: 10px; letter-spacing: 1.5px; padding: 3px 8px; border-radius: 4px; }
+.badge.idle { background: var(--surface2); color: var(--muted); }
+.badge.running { background: #0d3b27; color: #3fb950; }
+.badge.recording { background: #3b0d0d; color: #f85149; animation: pulse 1s infinite; }
+.badge.calibrating { background: #3b2f0d; color: #d29922; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.tab { font-size: 11px; letter-spacing: 1.5px; padding: 7px 16px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: transparent; color: var(--muted); cursor: pointer; transition: all .15s; }
+.tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tab:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+/* Layout */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.card-title { font-size: 10px; letter-spacing: 2px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; }
+
+/* Buttons */
+.btn { font-size: 11px; letter-spacing: 1px; padding: 7px 14px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: transparent; color: var(--text); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.btn:hover { background: var(--surface2); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.primary:hover { background: var(--accent-dim); }
+.btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn.warn-btn { border-color: var(--warn); color: var(--warn); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+/* Inputs */
+select, input[type=text], input[type=number] {
+  font-size: 12px; padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--surface2); color: var(--text);
+  font-family: 'Courier New', monospace; width: 100%; }
+.form-row { margin-bottom: 10px; }
+.form-label { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 5px; display: block; }
+input[type=range] { accent-color: var(--accent); width: 100%; }
+
+/* Joints */
+.joint-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.joint-label { font-size: 10px; width: 95px; color: var(--muted); }
+.joint-val { font-size: 12px; width: 48px; text-align: right; color: var(--text); font-weight: 600; }
+
+/* Metrics */
+.metric { background: var(--surface2); border-radius: 6px; padding: 10px 12px; }
+.metric-label { font-size: 9px; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 4px; }
+.metric-val { font-size: 18px; font-weight: 600; color: var(--text); }
+.metric-val small { font-size: 10px; font-weight: 400; color: var(--muted); }
+.metrics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+
+/* Log */
+.log-area { font-size: 10px; color: #3fb950; background: #040d06;
+  border-radius: 6px; padding: 10px; height: 120px; overflow-y: auto; line-height: 1.8; border: 1px solid #0d3b27; }
+.log-ts { color: #0F6E56; margin-right: 6px; }
+.log-warn { color: var(--warn); }
+.log-err { color: var(--danger); }
+
+/* Camera */
+.cam-wrap { background: #020a04; border-radius: var(--radius); overflow: hidden; position: relative; aspect-ratio: 16/9; border: 1px solid var(--border); }
+.cam-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cam-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 8px; pointer-events: none; }
+.cam-label { font-size: 10px; letter-spacing: 2px; color: #3fb950; text-shadow: 0 0 8px #3fb95088; }
+.cam-meta { font-size: 9px; color: #3fb95066; }
+.rec-badge { display: flex; align-items: center; gap: 5px; font-size: 10px; letter-spacing: 1px; color: #f85149; }
+.rec-dot { width: 7px; height: 7px; border-radius: 50%; background: #f85149; }
+.rec-dot.blink { animation: pulse 0.8s infinite; }
+.cam-grid { position: absolute; inset: 0; opacity: .06;
+  background-image: linear-gradient(#3fb950 1px,transparent 1px), linear-gradient(90deg,#3fb950 1px,transparent 1px);
+  background-size: 40px 40px; pointer-events: none; }
+
+/* Episodes */
+.ep-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; }
+.ep-num { width: 28px; color: var(--muted); font-size: 10px; }
+.ep-name { flex: 1; font-size: 12px; }
+.ep-sub { font-size: 10px; color: var(--muted); }
+.ep-len { width: 52px; text-align: right; font-size: 10px; color: var(--muted); }
+.ep-btn { font-size: 10px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; background: transparent; cursor: pointer; color: var(--muted); }
+.ep-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Calibration */
+.cal-step { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.cal-num { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); flex-shrink: 0; }
+.cal-num.done { background: var(--accent); color: #fff; border-color: var(--accent); }
+.cal-num.cur { border-color: var(--accent); color: var(--accent); }
+.cal-text { font-size: 12px; padding-top: 2px; }
+.cal-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* Progress */
+.pbar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin: 6px 0; }
+.pfill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .5s; }
+
+/* Timeline */
+.timeline { width: 100%; height: 36px; background: var(--surface2); border-radius: 6px;
+  position: relative; overflow: hidden; margin: 8px 0; cursor: pointer; border: 1px solid var(--border); }
+.tl-segs { height: 100%; display: flex; align-items: center; padding: 0 6px; gap: 2px; }
+.tl-seg { height: 18px; border-radius: 3px; background: var(--accent); opacity: .6; }
+.tl-head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--warn); pointer-events: none; }
+
+/* ARM SVG */
+#arm-svg line { transition: all .08s; }
+#arm-svg circle { transition: cx .08s, cy .08s; }
+
+/* WS status indicator */
+.ws-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="logo">SO-101 CONTROL</div>
+    <div class="status-row">
+      <div class="dot warn" id="conn-dot"></div>
+      <span class="status-text" id="conn-status">DISCONNECTED</span>
+      <span style="color:var(--border);margin:0 6px">|</span>
+      <span class="badge idle" id="mode-badge">IDLE</span>
+      <span style="color:var(--border);margin:0 6px">|</span>
+      <div class="ws-indicator">
+        <div class="dot off" id="ws-dot"></div>
+        <span class="status-text" id="ws-status">WS: disconnected</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted)">PORT</span>
+      <select id="port-sel" style="width:130px">
+        <option>/dev/ttyUSB0</option><option>/dev/ttyACM0</option>
+        <option>/dev/ttyACM1</option><option>/dev/ttyUSB1</option><option>COM3</option><option>COM4</option>
+      </select>
+      <select id="baud-sel" style="width:100px">
+        <option value="1000000">1 000 000</option>
+        <option value="115200">115 200</option>
+        <option value="57600">57 600</option>
+      </select>
+      <button class="btn primary" id="conn-btn" onclick="toggleArm()">CONNECT ARM</button>
+      <button class="btn" id="conn-both-btn" onclick="toggleBothArms()">CONNECT BOTH</button>
+      <span id="arm-status" style="font-size:10px;color:var(--muted);margin-left:4px"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">
+      <span style="font-size:11px;color:var(--muted)">LEADER</span>
+      <select id="leader-port-sel" style="width:110px">
+        <option>/dev/ttyACM0</option><option>/dev/ttyACM1</option>
+        <option>/dev/ttyUSB0</option><option>/dev/ttyUSB1</option><option>sim</option>
+      </select>
+      <span style="font-size:11px;color:var(--muted)">FOLLOWER</span>
+      <select id="follower-port-sel" style="width:110px">
+        <option>/dev/ttyACM1</option><option>/dev/ttyACM0</option>
+        <option>/dev/ttyUSB0</option><option>/dev/ttyUSB1</option><option>sim</option>
+      </select>
+      <button class="btn" id="ws-btn" onclick="connectWS()">CONNECT BRIDGE</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('control')">CONTROL</button>
+    <button class="tab" onclick="switchTab('calibrate')">CALIBRATE</button>
+    <button class="tab" onclick="switchTab('record')">RECORD</button>
+    <button class="tab" onclick="switchTab('replay')">REPLAY</button>
+    <button class="tab" onclick="switchTab('settings')">SETTINGS</button>
+    <button class="tab" onclick="switchTab('teleop')">TELEOP</button>
+    <button class="tab" onclick="switchTab('hand')">HAND</button>
+    <button class="tab" onclick="switchTab('voice')">VOICE</button>
+  </div>
+
+  <!-- ═══════════════════════ CONTROL ═══════════════════════ -->
+  <div class="panel active" id="panel-control">
+    <div class="grid2" style="margin-bottom:12px">
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">JOINT CONTROL</div>
+          <div id="joints-ui"></div>
+          <div class="btn-row">
+            <button class="btn primary" onclick="send({cmd:'home'})">HOME</button>
+            <button class="btn" onclick="send({cmd:'zero'})">ZERO</button>
+            <button class="btn danger" onclick="send({cmd:'estop'})">⚡ E-STOP</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">GRIPPER</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:11px;color:var(--muted)">OPEN</span>
+            <input type="range" min="0" max="100" value="50" id="gripper-range"
+              oninput="onGripper(this.value)">
+            <span style="font-size:11px;color:var(--muted)">CLOSE</span>
+          </div>
+          <div style="text-align:center;font-size:22px;font-weight:700;margin-bottom:8px" id="gripper-pct">50%</div>
+          <div class="btn-row" style="justify-content:center">
+            <button class="btn" onclick="setGripper(0)">FULL OPEN</button>
+            <button class="btn" onclick="setGripper(100)">FULL CLOSE</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">ARM VISUALIZATION</div>
+          <svg id="arm-svg" viewBox="-30 0 260 270" width="100%" style="display:block">
+            <defs>
+              <linearGradient id="segGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="var(--accent)"/>
+                <stop offset="100%" stop-color="var(--warn)"/>
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="250" x2="200" y2="250" stroke="var(--border)" stroke-dasharray="3 3" stroke-width=".5" opacity=".3"/>
+            <rect x="72" y="235" width="56" height="16" rx="4" fill="var(--surface2)" stroke="var(--border)" stroke-width=".8"/>
+            <text x="100" y="246" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="Courier New">BASE</text>
+            <line id="seg1" x1="100" y1="235" x2="100" y2="185" stroke="var(--accent)" stroke-width="7" stroke-linecap="round" opacity=".8"/>
+            <circle id="j1c" cx="100" cy="235" r="5" fill="var(--accent)" opacity=".95"/>
+            <text id="lj1" x="108" y="216" font-size="7" fill="var(--muted)" font-family="Courier New">J1</text>
+            <line id="seg2" x1="100" y1="185" x2="100" y2="140" stroke="var(--accent)" stroke-width="5.5" stroke-linecap="round" opacity=".8"/>
+            <circle id="j2c" cx="100" cy="185" r="4.5" fill="var(--accent)" opacity=".95"/>
+            <text id="lj2" x="108" y="168" font-size="7" fill="var(--muted)" font-family="Courier New">J2</text>
+            <line id="seg3" x1="100" y1="140" x2="100" y2="100" stroke="var(--accent)" stroke-width="4.5" stroke-linecap="round" opacity=".8"/>
+            <circle id="j3c" cx="100" cy="140" r="4" fill="var(--accent)" opacity=".95"/>
+            <text id="lj3" x="108" y="125" font-size="7" fill="var(--muted)" font-family="Courier New">J3</text>
+            <line id="seg4" x1="100" y1="100" x2="100" y2="65" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+            <circle id="j4c" cx="100" cy="100" r="3.5" fill="var(--accent)" opacity=".95"/>
+            <text id="lj4" x="108" y="87" font-size="7" fill="var(--muted)" font-family="Courier New">J4</text>
+            <circle id="j5c" cx="100" cy="65" r="3" fill="var(--warn)" opacity=".95"/>
+            <line id="ee1" x1="92" y1="56" x2="108" y2="56" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+            <line id="ee2" x1="100" y1="48" x2="100" y2="65" stroke="var(--accent)" stroke-width="2"/>
+            <line id="gf1" x1="100" y1="51" x2="94" y2="51" stroke="var(--warn)" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+            <line id="gf2" x1="100" y1="51" x2="106" y2="51" stroke="var(--warn)" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+            <text x="100" y="38" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="Courier New">END EFFECTOR</text>
+          </svg>
+        </div>
+        <div class="card">
+          <div class="card-title">LIVE TELEMETRY</div>
+          <div class="metrics-grid" id="telem-grid"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">SYSTEM LOG</div>
+      <div class="log-area" id="log-area"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ CALIBRATE ═══════════════════════ -->
+  <div class="panel" id="panel-calibrate">
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">CALIBRATION WIZARD</div>
+        <div class="form-row" style="margin-bottom:8px">
+          <label class="form-label" style="min-width:auto">ARM</label>
+          <select id="cal-arm-select" style="flex:1">
+            <option value="follower">Follower (ttyACM1)</option>
+            <option value="leader">Leader (ttyACM0)</option>
+            <option value="both">Both (follower → leader)</option>
+          </select>
+        </div>
+        <div id="cal-steps-ui"></div>
+        <div class="pbar"><div class="pfill" id="cal-pfill" style="width:0%"></div></div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:12px" id="cal-plabel">0 / 5 complete</div>
+        <div class="btn-row">
+          <button class="btn primary" id="cal-btn" onclick="doCalStep()">START AUTO CALIBRATION</button>
+          <button class="btn danger" id="cal-estop-btn" onclick="doCalEStop()" style="display:none">⏹ E‑STOP</button>
+          <button class="btn" onclick="resetCal()">RESET</button>
+          <button class="btn" onclick="send({cmd:'save_calibration'})">SAVE CONFIG</button>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">JOINT LIMITS (°)</div>
+          <div id="limits-ui"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">TORQUE</div>
+          <div class="form-row">
+            <label class="form-label">MAX TORQUE</label>
+            <input type="range" min="10" max="100" value="60"
+              oninput="document.getElementById('tq-val').textContent=this.value+'%'">
+            <div style="text-align:right;font-size:11px;margin-top:4px" id="tq-val">60%</div>
+          </div>
+          <div class="form-row">
+            <label class="form-label">CONTROL MODE</label>
+            <select><option>POSITION</option><option>VELOCITY</option><option>CURRENT</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ RECORD ═══════════════════════ -->
+  <div class="panel" id="panel-record">
+    <div class="grid2" style="margin-bottom:12px">
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">CAMERA FEEDS</div>
+          <div class="cam-wrap" style="margin-bottom:8px">
+            <img id="cam1-img" src="" alt="">
+            <canvas id="cam1-canvas" style="position:absolute;inset:0;width:100%;height:100%;display:none"></canvas>
+            <div class="cam-overlay">
+              <div style="display:flex;justify-content:space-between">
+                <span class="cam-label">CAM-01 / WRIST</span>
+                <div class="rec-badge"><div class="rec-dot" id="rd1"></div><span id="rt1">STANDBY</span></div>
+              </div>
+              <span class="cam-meta" id="cm1"></span>
+            </div>
+            <div class="cam-grid"></div>
+          </div>
+          <div class="cam-wrap">
+            <img id="cam2-img" src="" alt="">
+            <div class="cam-overlay">
+              <div style="display:flex;justify-content:space-between">
+                <span class="cam-label">CAM-02 / OVERHEAD</span>
+                <div class="rec-badge"><div class="rec-dot" id="rd2"></div><span id="rt2">STANDBY</span></div>
+              </div>
+              <span class="cam-meta">/cam/2</span>
+            </div>
+            <div class="cam-grid"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">EPISODE SETTINGS</div>
+          <div class="form-row"><label class="form-label">NAME</label>
+            <input type="text" id="ep-name" value="episode_001"></div>
+          <div class="form-row"><label class="form-label">TASK</label>
+            <input type="text" id="ep-task" value="Pick and place"></div>
+          <div class="form-row"><label class="form-label">SAMPLE RATE (Hz)</label>
+            <select id="ep-fps"><option>30</option><option selected>50</option><option>100</option></select></div>
+          <div class="form-row">
+            <label class="form-label">CAMERAS</label>
+            <div style="display:flex;gap:12px;margin-top:4px">
+              <label style="font-size:11px;display:flex;gap:5px;align-items:center"><input type="checkbox" id="cam-wrist" checked> Wrist (/dev/video0)</label>
+              <label style="font-size:11px;display:flex;gap:5px;align-items:center"><input type="checkbox" id="cam-over" checked> Overhead (/dev/video2)</label>
+            </div>
+          </div>
+          <div class="form-row"><label class="form-label">TELEOP MODE</label>
+            <select><option>Leader-Follower</option><option>Keyboard</option><option>SpaceMouse</option></select></div>
+          <div class="pbar" style="margin-top:8px"><div class="pfill" id="rec-pfill" style="width:0%"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
+            <span id="rec-elapsed">0.0 s</span><span>Max 60 s</span></div>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn primary" id="rec-btn" onclick="toggleRecord()">START RECORDING</button>
+            <button class="btn danger" onclick="discardRec()">DISCARD</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">FRAME STATS</div>
+          <div class="metrics-grid" id="frame-stats-grid"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">SAVED EPISODES</div>
+      <div id="ep-list"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ REPLAY ═══════════════════════ -->
+  <div class="panel" id="panel-replay">
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">SELECT EPISODE</div>
+        <div id="replay-ep-list"></div>
+        <div style="margin-top:14px">
+          <div class="card-title" style="margin-top:4px">PLAYBACK</div>
+          <div class="timeline" id="replay-tl" onclick="scrubTL(event)">
+            <div class="tl-segs" id="tl-segs"></div>
+            <div class="tl-head" id="tl-head" style="left:0%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
+            <span id="rp-pos">0.0 s</span><span id="rp-dur">—</span></div>
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn" onclick="replaySkip(-5)">-5s</button>
+            <button class="btn primary" id="rp-btn" onclick="toggleReplay()">▶ PLAY</button>
+            <button class="btn" onclick="replaySkip(5)">+5s</button>
+            <button class="btn warn-btn" onclick="stopReplay()">■ STOP</button>
+          </div>
+          <div class="form-row" style="margin-top:10px">
+            <label class="form-label">SPEED</label>
+            <select id="rp-speed" onchange="rpSpeed=parseFloat(this.value)">
+              <option value="0.25">0.25×</option><option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option><option value="2">2×</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">REPLAY CAMERA</div>
+        <div class="cam-wrap" style="margin-bottom:12px">
+          <img id="cam-rp-img" src="" style="width:100%;height:100%;object-fit:cover;display:block" alt="">
+          <div class="cam-overlay">
+            <span class="cam-label">REPLAY VIEW</span>
+            <span class="cam-meta" id="rp-frame-lbl">FRAME —</span>
+          </div>
+          <div class="cam-grid"></div>
+        </div>
+        <div class="card-title">JOINT STATE</div>
+        <div id="rp-joints-ui"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ SETTINGS ═══════════════════════ -->
+  <div class="panel" id="panel-settings">
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">ROBOT</div>
+        <div class="form-row"><label class="form-label">ROBOT TYPE</label>
+          <select id="cfg-robot-type"><option value="so101">SO-101</option><option value="so100">SO-100</option></select></div>
+        <div class="form-row"><label class="form-label">DATASET DIR</label>
+          <input type="text" id="cfg-dataset-dir" value="~/datasets/so101"></div>
+        <div class="form-row"><label class="form-label">DATASET FORMAT</label>
+          <select><option>lerobot_v2</option><option>rlds</option><option>hdf5</option></select></div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="saveConfig()">SAVE CONFIG</button>
+          <button class="btn" onclick="send({cmd:'get_config'})">RELOAD</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">CAMERAS</div>
+        <div class="form-row"><label class="form-label">WRIST DEVICE</label>
+          <select><option>/dev/video0</option><option>/dev/video2</option></select></div>
+        <div class="form-row"><label class="form-label">OVERHEAD DEVICE</label>
+          <select><option>/dev/video2</option><option>/dev/video0</option><option>/dev/video4</option></select></div>
+        <div class="form-row"><label class="form-label">RESOLUTION</label>
+          <select><option>640×480</option><option selected>1280×720</option><option>1920×1080</option></select></div>
+        <div class="form-row"><label class="form-label">CODEC</label>
+          <select><option>MJPG</option><option>H264</option><option>YUY2</option></select></div>
+        <div class="btn-row"><button class="btn primary" onclick="send({cmd:'start_cameras'})">START CAMERAS</button>
+          <button class="btn" onclick="send({cmd:'stop_cameras'})">STOP</button></div>
+      </div>
+      <div class="card">
+        <div class="card-title">LEROBOT / HUGGINGFACE</div>
+        <div class="form-row"><label class="form-label">HF REPO ID</label>
+          <input type="text" id="hf-repo" value="username/so101-dataset"></div>
+        <div class="form-row"><label class="form-label">POLICY</label>
+          <select><option>ACT</option><option>Diffusion</option><option>Pi0</option><option>SmolVLA</option></select></div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="pushToHub()">PUSH TO HUB</button>
+          <button class="btn" onclick="send({cmd:'list_episodes'})">REFRESH EPISODES</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">SAFETY</div>
+        <div class="form-row"><label class="form-label">WORKSPACE (mm)</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+            <input type="number" placeholder="X min" value="-300">
+            <input type="number" placeholder="X max" value="300">
+            <input type="number" placeholder="Y min" value="-300">
+            <input type="number" placeholder="Y max" value="300">
+            <input type="number" placeholder="Z min" value="0">
+            <input type="number" placeholder="Z max" value="450">
+          </div>
+        </div>
+        <div class="form-row"><label class="form-label">COLLISION DETECTION</label>
+          <select><option>ENABLED</option><option>DISABLED</option></select></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ TELEOP ═══════════════════════ -->
+  <div class="panel" id="panel-teleop">
+    <div class="grid2" style="margin-bottom:12px">
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">LEADER STATE</div>
+          <div class="form-row">
+            <label class="form-label">LEADER PORT</label>
+            <select id="teleop-leader-port">
+              <option>/dev/ttyUSB0</option><option>/dev/ttyACM0</option><option>/dev/ttyACM1</option>
+              <option>/dev/ttyUSB1</option><option>COM3</option><option>COM4</option>
+            </select>
+          </div>
+          <div id="leader-joints-ui"></div>
+          <div class="card-title" style="margin-top:14px">LEADER GRIPPER</div>
+          <div style="text-align:center;font-size:22px;font-weight:700" id="leader-gripper-val">—</div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">FOLLOWER STATE</div>
+          <div class="form-row">
+            <label class="form-label">FOLLOWER PORT</label>
+            <select id="teleop-follower-port">
+              <option>/dev/ttyUSB0</option><option>/dev/ttyACM0</option><option selected>/dev/ttyACM1</option>
+              <option>/dev/ttyUSB1</option><option>COM3</option><option>COM4</option>
+            </select>
+          </div>
+          <div id="follower-joints-ui"></div>
+          <div class="card-title" style="margin-top:14px">FOLLOWER GRIPPER</div>
+          <div style="text-align:center;font-size:22px;font-weight:700" id="follower-gripper-val">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">TELEOP CONTROL</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button class="btn primary" id="teleop-start-btn" onclick="startTeleop()">START TELEOP</button>
+        <button class="btn danger" id="teleop-stop-btn" onclick="stopTeleop()">STOP TELEOP</button>
+        <span style="color:var(--border);margin:0 4px">|</span>
+        <span style="font-size:11px;color:var(--muted)">STATUS:</span>
+        <span class="badge idle" id="teleop-status-badge">INACTIVE</span>
+        <span class="status-text" id="teleop-status-text" style="font-size:11px;color:var(--muted)">Not running</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ HAND ════════════════════════ -->
+  <div class="panel" id="panel-hand">
+    <div class="grid2" style="margin-bottom:12px">
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">HAND TRACKING</div>
+          <div class="form-row">
+            <label class="form-label">CAMERA</label>
+            <select id="hand-cam-sel" style="width:80px">
+              <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+            </select>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="hand-start-btn" onclick="toggleHandTracking()">START HAND TRACKING</button>
+            <button class="btn danger" onclick="send({cmd:'estop'})">⚡ E-STOP</button>
+          </div>
+          <div style="margin-top:10px;font-size:12px">
+            <div>Status: <span id="hand-status" style="font-weight:700;color:var(--muted)">STOPPED</span></div>
+            <div>Detected: <span id="hand-detected" style="color:var(--muted)">—</span></div>
+            <div>Grip: <span id="hand-pinch" style="color:var(--muted)">—</span></div>
+            <div>Pos: <span id="hand-pos" style="color:var(--muted)">—</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">JOINT ANGLES</div>
+          <div id="hand-joints-ui" style="font-size:12px;line-height:1.8">
+            J0: <span id="hand-j0">—</span><br>
+            J1: <span id="hand-j1">—</span><br>
+            J2: <span id="hand-j2">—</span><br>
+            J3: <span id="hand-j3">—</span><br>
+            J4: <span id="hand-j4">—</span><br>
+            Gripper: <span id="hand-gripper">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">CAMERA FEED</div>
+      <img id="hand-cam-img" src="" style="max-width:100%;max-height:380px;border-radius:4px;display:none">
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ VOICE ═══════════════════════ -->
+  <div class="panel" id="panel-voice">
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">VOICE CONTROL</div>
+      <div style="text-align:center;padding:20px">
+        <button class="btn primary" id="voice-ptt-btn" style="font-size:18px;padding:16px 40px"
+          onmousedown="startVoiceRecord()" onmouseup="stopVoiceRecord()" ontouchstart="startVoiceRecord()" ontouchend="stopVoiceRecord()">
+          🎤 HOLD TO TALK
+        </button>
+        <div style="margin-top:12px;font-size:12px">
+          <div>Status: <span id="voice-status" style="font-weight:700;color:var(--muted)">READY</span></div>
+          <div>Last command: <span id="voice-last" style="color:var(--muted)">—</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">AVAILABLE COMMANDS</div>
+      <div style="font-size:12px;line-height:1.7;columns:2">
+        <div>"home" — go to home</div>
+        <div>"open gripper" — open</div>
+        <div>"close gripper" — close</div>
+        <div>"stop" — emergency stop</div>
+        <div>"zero" — zero joints</div>
+        <div>"record" — start recording</div>
+        <div>"stop record" — stop recording</div>
+        <div>"wave" — wave motion</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── WebSocket ─────────────────────────────────────────────────────────────
+let ws = null, wsReady = false;
+let armConnected = false, recording = false, replayActive = false;
+let handTrackingRunning = false;
+let voiceRecording = false;
+let recTimer = null, recSec = 0;
+let rpEpisode = null, rpPos = 0, rpTimer = null, rpSpeed = 1.0;
+
+// When opened as file:// hostname is empty — fall back to localhost
+const WS_HOST = location.hostname || 'localhost';
+const WS_URL  = `ws://${WS_HOST}:8765`;
+const MJPEG_HOST = location.hostname || 'localhost';
+const MJPEG_PORT = 8766;
+const MJPEG_URL  = `http://${MJPEG_HOST}:${MJPEG_PORT}`;
+
+let _reconnectTimer = null;
+let _manualDisconnect = false;
+
+function connectWS() {
+  // Toggle: if already open, disconnect manually
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+    _manualDisconnect = true;
+    ws.close();
+    return;
+  }
+  _manualDisconnect = false;
+  _doConnect();
+}
+
+function _doConnect() {
+  ws = new WebSocket(WS_URL);
+  document.getElementById('ws-status').textContent = 'WS: connecting…';
+  document.getElementById('ws-dot').className = 'dot warn';
+
+  ws.onopen = () => {
+    wsReady = true;
+    _manualDisconnect = false;
+    setWsDot(true);
+    document.getElementById('ws-status').textContent = 'WS: connected';
+    document.getElementById('ws-btn').textContent = 'DISCONNECT BRIDGE';
+    addLog('Bridge connected at ' + WS_URL);
+    send({ cmd: 'list_episodes' });
+    document.getElementById('cam1-img').src = MJPEG_URL + '/cam/0';
+    document.getElementById('cam2-img').src = MJPEG_URL + '/cam/2';
+    document.getElementById('cm1').textContent = MJPEG_URL + '/cam/0';
+  };
+
+  ws.onclose = (ev) => {
+    wsReady = false;
+    setWsDot(false);
+    document.getElementById('ws-status').textContent = 'WS: disconnected';
+    document.getElementById('ws-btn').textContent = 'CONNECT BRIDGE';
+    if (!_manualDisconnect) {
+      addLog('Bridge disconnected — retrying in 3s…', 'warn');
+      _reconnectTimer = setTimeout(_doConnect, 3000);
+    } else {
+      addLog('Bridge disconnected');
+    }
+  };
+
+  ws.onerror = () => {
+    // Suppress — onclose fires right after and handles the UI
+  };
+
+  ws.onmessage = e => {
+    try { handleMsg(JSON.parse(e.data)); }
+    catch(err) { addLog('Parse error: ' + err, 'err'); }
+  };
+}
+
+function send(obj) {
+  if (!wsReady) { addLog('Bridge not connected', 'warn'); return; }
+  ws.send(JSON.stringify(obj));
+}
+
+function setWsDot(on) {
+  const d = document.getElementById('ws-dot');
+  d.className = 'dot ' + (on ? 'live' : 'off');
+}
+
+// ── Message handler ───────────────────────────────────────────────────────
+function handleMsg(m) {
+  switch (m.type) {
+    case 'hello':     addLog(m.msg); break;
+    case 'status':    onStatus(m); break;
+    case 'telemetry': onTelemetry(m); break;
+    case 'log':       addLog(m.msg, m.level); break;
+    case 'error':     addLog('ERR: ' + m.msg, 'err'); break;
+    case 'estop':     addLog('⚡ ' + m.msg, 'err'); setMode('IDLE'); break;
+    case 'episodes':  renderEpisodes(m.list); break;
+    case 'recording_started': onRecStarted(m); break;
+    case 'recording_stopped': onRecStopped(m); break;
+    case 'recording_discarded': addLog('Episode discarded', 'warn'); break;
+    case 'replay_started': addLog('Replay: ' + m.name + '  (' + m.frames + ' frames)'); break;
+    case 'replay_frame': onReplayFrame(m); break;
+    case 'replay_done':  addLog('Replay done: ' + m.name); stopReplay(); break;
+    case 'cal_result': addLog('Cal step done: ' + m.result.msg, m.result.ok ? 'info' : 'warn'); break;
+    case 'cal_estop':
+      calActive = false;
+      document.getElementById('cal-estop-btn').style.display = 'none';
+      setMode('IDLE');
+      buildCalUI();
+      addLog('Calibration stopped by E‑stop from server', 'warn');
+      break;
+    case 'cal_progress': onCalProgress(m); break;
+    case 'cal_done': onCalDone(m); break;
+    case 'episode_data': onEpisodeData(m); break;
+    case 'config':    applyConfig(m.data); break;
+    case 'hub_done':  addLog('Hub push ' + (m.success ? 'succeeded' : 'FAILED') + ': ' + m.repo, m.success ? 'info' : 'err'); break;
+    case 'teleop_started': onTeleopStarted(m); break;
+    case 'teleop_stopped': onTeleopStopped(m); break;
+  }
+}
+
+// ── ARM connection ────────────────────────────────────────────────────────
+var bothArmsConnected = false;
+
+function toggleArm() {
+  if (!armConnected) {
+    send({ cmd: 'connect', port: document.getElementById('port-sel').value,
+           baud: document.getElementById('baud-sel').value });
+  } else {
+    send({ cmd: 'disconnect' });
+  }
+}
+
+function toggleBothArms() {
+  if (!bothArmsConnected) {
+    send({ cmd: 'connect_arms',
+           leader_port: document.getElementById('leader-port-sel').value,
+           follower_port: document.getElementById('follower-port-sel').value,
+           baud: document.getElementById('baud-sel').value });
+  } else {
+    send({ cmd: 'disconnect' });
+  }
+}
+
+function updateArmStatus(m) {
+  const el = document.getElementById('arm-status');
+  const bothBtn = document.getElementById('conn-both-btn');
+  if (m.leader_connected && m.follower_connected) {
+    bothArmsConnected = true;
+    bothBtn.textContent = 'DISCONNECT ALL';
+    el.textContent = 'Leader + Follower';
+  } else if (m.leader_connected) {
+    bothArmsConnected = false;
+    bothBtn.textContent = 'CONNECT BOTH';
+    el.textContent = 'Leader only';
+  } else if (m.follower_connected) {
+    bothArmsConnected = false;
+    bothBtn.textContent = 'CONNECT BOTH';
+    el.textContent = 'Follower only';
+  } else {
+    bothArmsConnected = false;
+    bothBtn.textContent = 'CONNECT BOTH';
+    el.textContent = '';
+  }
+}
+
+function onStatus(m) {
+  armConnected = m.connected;
+  const dot = document.getElementById('conn-dot');
+  const st  = document.getElementById('conn-status');
+  const btn = document.getElementById('conn-btn');
+  if (m.connected) {
+    dot.className = 'dot live'; st.textContent = 'CONNECTED';
+    btn.textContent = 'DISCONNECT ARM';
+  } else {
+    dot.className = 'dot off'; st.textContent = 'DISCONNECTED';
+    btn.textContent = 'CONNECT ARM';
+    setMode('IDLE');
+  }
+  if (m.teleop !== undefined) setTeleopStatus(m.teleop);
+  if (m.leader_connected !== undefined || m.follower_connected !== undefined)
+    updateArmStatus(m);
+  if (m.hand_tracking !== undefined) setHandTrackingStatus(m.hand_tracking);
+  if (m.voice_status !== undefined) setVoiceStatus(m.voice_status);
+  if (m.voice_last !== undefined) {
+    document.getElementById('voice-last').textContent = m.voice_last;
+  }
+  addLog(m.msg, m.connected ? 'info' : 'warn');
+}
+
+// ── Telemetry ─────────────────────────────────────────────────────────────
+function onTelemetry(m) {
+  // Update joint sliders + labels from live data
+  if (m.joints && m.joints.length) {
+    m.joints.forEach((a, i) => {
+      const sl = document.getElementById('jsl' + i);
+      const vl = document.getElementById('jvl' + i);
+      // Only update slider if user isn't actively dragging it
+      if (sl && document.activeElement !== sl) sl.value = a;
+      if (vl) vl.textContent = parseFloat(a).toFixed(1) + '°';
+    });
+    updateArmSVG(m.joints);
+  }
+
+  if (m.gripper !== undefined) {
+    const gv = document.getElementById('gripper-pct');
+    if (gv) gv.textContent = parseFloat(m.gripper).toFixed(0) + '%';
+    const gr = document.getElementById('gripper-range');
+    if (gr && document.activeElement !== gr) gr.value = m.gripper;
+  }
+
+  // TCP
+  const tcp = m.tcp || {};
+  setMetric('m-tcpx', fix1(tcp.x), 'mm');
+  setMetric('m-tcpy', fix1(tcp.y), 'mm');
+  setMetric('m-tcpz', fix1(tcp.z), 'mm');
+
+  // Electrical — sum of joint currents
+  if (m.current && m.current.length) {
+    const total = m.current.reduce((a, b) => a + b, 0);
+    setMetric('m-cur', total.toFixed(2), 'A');
+  }
+  if (m.temperature && m.temperature.length) {
+    const maxT = Math.max(...m.temperature);
+    setMetric('m-tmp', maxT.toFixed(0), '°C');
+  }
+  if (m.voltage !== undefined && m.voltage !== null) {
+    setMetric('m-vlt', parseFloat(m.voltage).toFixed(1), 'V');
+  }
+
+  // Mode badge update
+  if (m.mode === 'simulation') {
+    const mb = document.getElementById('mode-badge');
+    if (mb && mb.textContent === 'IDLE') {
+      mb.textContent = 'SIM';
+      mb.className = 'badge idle';
+    }
+  }
+
+  // Recording stats
+  if (m.rec_frames !== undefined) {
+    const fe = document.getElementById('fs-frames');
+    if (fe) fe.innerHTML = m.rec_frames + '<small> fr</small>';
+    const fe2 = document.getElementById('fs-el');
+    if (fe2 && m.rec_elapsed !== undefined)
+      fe2.innerHTML = parseFloat(m.rec_elapsed).toFixed(1) + '<small> s</small>';
+    const fe3 = document.getElementById('fs-fps');
+    if (fe3 && m.rec_elapsed > 0) {
+      const fps = m.rec_frames / m.rec_elapsed;
+      fe3.innerHTML = fps.toFixed(1) + '<small> Hz</small>';
+    }
+  }
+
+  // Teleop state
+  if (m.teleop) {
+    const leaderJoints = m.teleop.leader && m.teleop.leader.joints;
+    const followerJoints = m.teleop.follower && m.teleop.follower.joints;
+    const leaderGripper = m.teleop.leader && m.teleop.leader.gripper;
+    const followerGripper = m.teleop.follower && m.teleop.follower.gripper;
+
+    if (leaderJoints && leaderJoints.length) {
+      leaderJoints.forEach((a, i) => {
+        const vl = document.getElementById('tljv' + i);
+        if (vl) vl.textContent = parseFloat(a).toFixed(1) + '\u00b0';
+      });
+    }
+    if (followerJoints && followerJoints.length) {
+      followerJoints.forEach((a, i) => {
+        const vl = document.getElementById('tfjv' + i);
+        if (vl) vl.textContent = parseFloat(a).toFixed(1) + '\u00b0';
+      });
+    }
+    if (leaderGripper !== undefined) {
+      const el = document.getElementById('leader-gripper-val');
+      if (el) el.textContent = parseFloat(leaderGripper).toFixed(0) + '%';
+    }
+    if (followerGripper !== undefined) {
+      const el = document.getElementById('follower-gripper-val');
+      if (el) el.textContent = parseFloat(followerGripper).toFixed(0) + '%';
+    }
+  }
+
+  // Hand tracking
+  if (m.hand) {
+    document.getElementById('hand-detected').textContent = m.hand.detected ? 'YES' : 'NO';
+    document.getElementById('hand-detected').style.color = m.hand.detected ? 'var(--accent)' : 'var(--muted)';
+    document.getElementById('hand-pinch').textContent = parseFloat(m.hand.pinch).toFixed(2);
+    document.getElementById('hand-pos').textContent =
+      '(' + parseFloat(m.hand.x).toFixed(2) + ', ' + parseFloat(m.hand.y).toFixed(2) + ')';
+  }
+  // Hand joint display (use same telemetry joints when hand tracking active)
+  if (handTrackingRunning && m.joints && m.joints.length >= 5) {
+    document.getElementById('hand-j0').textContent = parseFloat(m.joints[0]).toFixed(1) + '\u00b0';
+    document.getElementById('hand-j1').textContent = parseFloat(m.joints[1]).toFixed(1) + '\u00b0';
+    document.getElementById('hand-j2').textContent = parseFloat(m.joints[2]).toFixed(1) + '\u00b0';
+    document.getElementById('hand-j3').textContent = parseFloat(m.joints[3]).toFixed(1) + '\u00b0';
+    document.getElementById('hand-j4').textContent = parseFloat(m.joints[4]).toFixed(1) + '\u00b0';
+  }
+  if (handTrackingRunning && m.gripper !== undefined) {
+    document.getElementById('hand-gripper').textContent = parseFloat(m.gripper).toFixed(0) + '%';
+  }
+}
+
+function fix1(v) {
+  const n = parseFloat(v);
+  return isNaN(n) ? '—' : n.toFixed(1);
+}
+
+function setMetric(id, val, unit) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = val + (unit ? `<small> ${unit}</small>` : '');
+}
+
+// ── Joints UI ─────────────────────────────────────────────────────────────
+const JOINTS = [
+  { name: 'SHOULDER PAN', min: -180, max: 180 },
+  { name: 'SHOULDER LIFT', min: -90, max: 90 },
+  { name: 'ELBOW', min: -135, max: 135 },
+  { name: 'WRIST PITCH', min: -90, max: 90 },
+  { name: 'WRIST ROLL', min: -180, max: 180 },
+];
+
+function buildJointsUI() {
+  const c = document.getElementById('joints-ui');
+  c.innerHTML = JOINTS.map((j, i) => `
+    <div class="joint-row">
+      <div class="joint-label">${j.name}</div>
+      <input type="range" min="${j.min}" max="${j.max}" value="0" id="jsl${i}"
+        style="flex:1;accent-color:var(--accent)"
+        oninput="onJointSlider(${i},this.value)">
+      <div class="joint-val" id="jvl${i}">0°</div>
+    </div>`).join('');
+}
+
+function onJointSlider(i, val) {
+  document.getElementById('jvl' + i).textContent = parseFloat(val).toFixed(1) + '°';
+  send({ cmd: 'set_joint', joint: i, angle: parseFloat(val) });
+}
+
+function onGripper(v) {
+  document.getElementById('gripper-pct').textContent = v + '%';
+  send({ cmd: 'set_gripper', value: parseFloat(v) });
+}
+function setGripper(v) {
+  document.getElementById('gripper-range').value = v;
+  onGripper(v);
+}
+
+// ── Arm SVG — accurate FK side view ──────────────────────────────────────
+const ARM_L = [117, 130, 124, 60]; // mm: J1→J2, J2→J3, J3→J4, J4→J5 (end of J4 arm)
+const SVG_CX = 100, SVG_BASE = 235, SVG_SCALE = 0.22;
+
+function fkSideView(joints) {
+  let cum = 0, wx = 0, wz = 0;
+  const pts = [{x: 0, z: 0}];
+  for (let i = 0; i < ARM_L.length && i < joints.length; i++) {
+    cum += joints[i] * Math.PI / 180;
+    wx += ARM_L[i] * Math.cos(cum);
+    wz += ARM_L[i] * Math.sin(cum);
+    pts.push({x: wx, z: wz});
+  }
+  return pts;
+}
+
+function toSVG(p) {
+  return {x: SVG_CX - p.x * SVG_SCALE, y: SVG_BASE + p.z * SVG_SCALE};
+}
+
+function setAttr(id, attrs) {
+  const e = document.getElementById(id);
+  if (!e) return;
+  Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+}
+
+function updateArmSVG(joints) {
+  if (!joints || joints.length < 4) return;
+  const pts = fkSideView(joints).map(toSVG);
+
+  setAttr('seg1', {x1: pts[0].x, y1: pts[0].y, x2: pts[1].x, y2: pts[1].y});
+  setAttr('j1c',  {cx: pts[1].x, cy: pts[1].y});
+  setAttr('lj1',  {x: pts[1].x + 8, y: pts[1].y + 4});
+
+  setAttr('seg2', {x1: pts[1].x, y1: pts[1].y, x2: pts[2].x, y2: pts[2].y});
+  setAttr('j2c',  {cx: pts[2].x, cy: pts[2].y});
+  setAttr('lj2',  {x: pts[2].x + 8, y: pts[2].y + 4});
+
+  setAttr('seg3', {x1: pts[2].x, y1: pts[2].y, x2: pts[3].x, y2: pts[3].y});
+  setAttr('j3c',  {cx: pts[3].x, cy: pts[3].y});
+  setAttr('lj3',  {x: pts[3].x + 8, y: pts[3].y + 4});
+
+  setAttr('seg4', {x1: pts[3].x, y1: pts[3].y, x2: pts[4].x, y2: pts[4].y});
+  setAttr('j4c',  {cx: pts[4].x, cy: pts[4].y});
+  setAttr('lj4',  {x: pts[4].x + 8, y: pts[4].y + 4});
+
+  setAttr('j5c',  {cx: pts[4].x, cy: pts[4].y});
+
+  const ee = pts[4];
+  setAttr('ee1', {x1: ee.x - 8, y1: ee.y - 8, x2: ee.x + 8, y2: ee.y - 8});
+  setAttr('ee2', {x1: ee.x, y1: ee.y - 16, x2: ee.x, y2: ee.y});
+
+  // Gripper fingers: open/close based on gripper value (read from DOM)
+  const gripPct = document.getElementById('gripper-pct');
+  let grip = 50;
+  if (gripPct) grip = parseFloat(gripPct.textContent) || 50;
+  const gap = grip / 100 * 10;
+  setAttr('gf1', {x1: ee.x, y1: ee.y - 16, x2: ee.x - gap, y2: ee.y - 16});
+  setAttr('gf2', {x1: ee.x, y1: ee.y - 16, x2: ee.x + gap, y2: ee.y - 16});
+}
+
+// ── Telemetry metrics build ───────────────────────────────────────────────
+function buildMetrics() {
+  const items = [
+    { id: 'm-tcpx', label: 'TCP X' },
+    { id: 'm-tcpy', label: 'TCP Y' },
+    { id: 'm-tcpz', label: 'TCP Z' },
+    { id: 'm-cur',  label: 'CURRENT' },
+    { id: 'm-tmp',  label: 'TEMP' },
+    { id: 'm-vlt',  label: 'VOLTAGE' },
+  ];
+  document.getElementById('telem-grid').innerHTML =
+    items.map(m =>
+      `<div class="metric">
+        <div class="metric-label">${m.label}</div>
+        <div class="metric-val" id="${m.id}">—</div>
+      </div>`
+    ).join('');
+
+  document.getElementById('frame-stats-grid').innerHTML = `
+    <div class="metric"><div class="metric-label">FRAMES</div><div class="metric-val" id="fs-frames">0<small> fr</small></div></div>
+    <div class="metric"><div class="metric-label">ELAPSED</div><div class="metric-val" id="fs-el">0<small> s</small></div></div>
+    <div class="metric"><div class="metric-label">RATE</div><div class="metric-val" id="fs-fps">—<small> Hz</small></div></div>`;
+}
+
+// ── Recording ─────────────────────────────────────────────────────────────
+function toggleRecord() {
+  if (!recording) {
+    const devices = [];
+    if (document.getElementById('cam-wrist').checked) devices.push(0);
+    if (document.getElementById('cam-over').checked) devices.push(2);
+    send({ cmd: 'start_recording',
+           name: document.getElementById('ep-name').value,
+           task: document.getElementById('ep-task').value,
+           fps: parseInt(document.getElementById('ep-fps').value),
+           devices });
+    send({ cmd: 'start_cameras', devices });
+  } else {
+    send({ cmd: 'stop_recording' });
+  }
+}
+
+function onRecStarted(m) {
+  recording = true; recSec = 0;
+  setMode('RECORDING');
+  document.getElementById('rec-btn').textContent = 'STOP RECORDING';
+
+  ['rd1','rd2'].forEach(id => document.getElementById(id).classList.add('blink'));
+  ['rt1','rt2'].forEach(id => document.getElementById(id).textContent = 'REC');
+  addLog('Recording: ' + m.name);
+  recTimer = setInterval(() => {
+    recSec += 0.1;
+    document.getElementById('rec-elapsed').textContent = recSec.toFixed(1) + ' s';
+    document.getElementById('rec-pfill').style.width = Math.min(recSec / 60 * 100, 100) + '%';
+    const fs = document.getElementById('fs-el'); if (fs) fs.innerHTML = recSec.toFixed(1) + '<small> s</small>';
+    if (recSec >= 60) toggleRecord();
+  }, 100);
+}
+
+function onRecStopped(m) {
+  recording = false;
+  clearInterval(recTimer);
+  setMode('IDLE');
+  document.getElementById('rec-btn').textContent = 'START RECORDING';
+  ['rd1','rd2'].forEach(id => document.getElementById(id).classList.remove('blink'));
+  ['rt1','rt2'].forEach(id => document.getElementById(id).textContent = 'STANDBY');
+  addLog('Saved: ' + m.info.name + '  ' + m.info.frames + ' frames  ' + m.info.size_mb + ' MB');
+  send({ cmd: 'list_episodes' });
+  autoIncrName();
+}
+
+function discardRec() { send({ cmd: 'discard_recording' }); if (recording) { recording = false; clearInterval(recTimer); setMode('IDLE'); document.getElementById('rec-btn').textContent='START RECORDING'; } }
+function autoIncrName() {
+  const el = document.getElementById('ep-name');
+  el.value = el.value.replace(/(\d+)$/, m => String(parseInt(m) + 1).padStart(m.length, '0'));
+}
+
+// ── Episodes ──────────────────────────────────────────────────────────────
+let episodes = [];
+function renderEpisodes(list) {
+  episodes = list || [];
+  const html = episodes.length ? episodes.map((e, i) => `
+    <div class="ep-row">
+      <div class="ep-num">#${String(i+1).padStart(2,'0')}</div>
+      <div style="flex:1"><div class="ep-name">${e.name}</div><div class="ep-sub">${e.task} · ${e.frames} frames · ${e.size_mb} MB</div></div>
+      <div class="ep-len">${e.duration}s</div>
+      <div style="display:flex;gap:4px">
+        <button class="ep-btn" onclick="loadReplay(${i})">▶ REPLAY</button>
+      </div>
+    </div>`).join('') : '<div style="font-size:12px;color:var(--muted);padding:8px">No episodes yet.</div>';
+  document.getElementById('ep-list').innerHTML = html;
+  document.getElementById('replay-ep-list').innerHTML = html;
+}
+
+// ── Replay ────────────────────────────────────────────────────────────────
+let rpFrames = [];     // full frame data from episode.json
+let rpFrameIdx = 0;    // current frame index
+
+function loadReplay(i) {
+  rpEpisode = episodes[i];
+  rpFrames = [];
+  rpFrameIdx = 0;
+  rpPos = 0;
+  send({ cmd: 'get_episode', name: rpEpisode.name });
+  buildRpJoints();
+  addLog('Loading: ' + rpEpisode.name);
+  switchTab('replay');
+}
+
+function onEpisodeData(m) {
+  rpEpisode = m.data;
+  rpFrames = m.data.frames || [];
+  rpFrameIdx = 0;
+  const dur = document.getElementById('rp-dur');
+  if (dur) dur.textContent = (rpEpisode.duration_s || 0).toFixed(1) + 's';
+  buildTLSegs();
+  updateRpFrame();
+  addLog('Loaded ' + rpEpisode.name + '  (' + rpFrames.length + ' frames)');
+}
+
+function buildTLSegs() {
+  const n = rpFrames.length;
+  if (!n) {
+    document.getElementById('tl-segs').innerHTML = '';
+    return;
+  }
+  const barW = Math.max(2, Math.min(8, (100 / n) - 0.5));
+  const html = rpFrames.map((f, i) => {
+    const joints = f.joints || [0,0,0,0,0];
+    const avg = joints.reduce((a,b)=>a+Math.abs(b),0)/joints.length;
+    const op = 0.3 + Math.min(0.7, avg / 90);
+    return `<div class="tl-seg" style="width:${barW}%;height:${8+joints[0]*0.15}px;opacity:${op}"></div>`;
+  }).join('');
+  document.getElementById('tl-segs').innerHTML = html;
+}
+
+function buildRpJoints() {
+  document.getElementById('rp-joints-ui').innerHTML = JOINTS.map((j, i) => `
+    <div class="joint-row">
+      <div class="joint-label" style="font-size:10px">${j.name}</div>
+      <div style="flex:1;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden">
+        <div id="rpjb${i}" style="height:100%;background:var(--accent);width:50%;border-radius:2px;transition:width .1s"></div>
+      </div>
+      <div class="joint-val" id="rpjv${i}">0°</div>
+    </div>`).join('');
+}
+
+function updateRpFrame() {
+  if (!rpFrames.length) return;
+  const fr = rpFrames[rpFrameIdx];
+  if (!fr) return;
+  const total = rpFrames.length;
+  rpPos = fr.timestamp || ((rpFrameIdx / total) * (rpEpisode.duration_s || 0));
+  const head = document.getElementById('tl-head');
+  if (head) head.style.left = (rpFrameIdx / total * 100) + '%';
+  document.getElementById('rp-pos').textContent = rpPos.toFixed(1) + 's';
+  document.getElementById('rp-frame-lbl').textContent = 'FRAME ' + rpFrameIdx + ' / ' + total;
+  // Joints
+  const joints = fr.joints || [];
+  joints.forEach((a, i) => {
+    const j = JOINTS[i];
+    const bar = document.getElementById('rpjb' + i);
+    const val = document.getElementById('rpjv' + i);
+    if (bar) bar.style.width = ((a - j.min) / (j.max - j.min) * 100).toFixed(0) + '%';
+    if (val) val.textContent = a.toFixed(1) + '°';
+  });
+  // Camera frame
+  const cams = fr.cameras || {};
+  const camKey = Object.keys(cams)[0];
+  const img = document.getElementById('cam-rp-img');
+  if (img && camKey) {
+    const camId = camKey.replace('cam_', '');
+    img.src = MJPEG_URL + '/episode-frame/' + rpEpisode.name + '/' + camId + '/' + rpFrameIdx;
+  }
+}
+
+function onReplayFrame(m) {
+  rpFrameIdx = m.frame;
+  updateRpFrame();
+}
+
+function toggleReplay() {
+  if (!rpFrames.length) { addLog('No episode data loaded', 'warn'); return; }
+  replayActive = !replayActive;
+  const btn = document.getElementById('rp-btn');
+  if (replayActive) {
+    if (rpFrameIdx >= rpFrames.length - 1) rpFrameIdx = 0;
+    btn.textContent = '⏸ PAUSE'; setMode('RUNNING');
+    send({ cmd: 'replay_episode', name: rpEpisode.name, speed: rpSpeed });
+  } else {
+    btn.textContent = '▶ PLAY'; setMode('IDLE');
+  }
+}
+
+function stopReplay() {
+  replayActive = false;
+  document.getElementById('rp-btn').textContent = '▶ PLAY';
+  setMode('IDLE');
+  rpFrameIdx = 0;
+  document.getElementById('tl-head').style.left = '0%';
+  document.getElementById('rp-pos').textContent = '0.0 s';
+  updateRpFrame();
+}
+
+function replaySkip(sec) {
+  if (!rpFrames.length) return;
+  const total = rpFrames.length;
+  const dur = rpEpisode.duration_s || total;
+  const target = Math.max(0, Math.min(dur, rpPos + sec));
+  rpFrameIdx = Math.round((target / dur) * (total - 1));
+  updateRpFrame();
+}
+
+function scrubTL(e) {
+  if (!rpFrames.length) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  rpFrameIdx = Math.round(pct * (rpFrames.length - 1));
+  updateRpFrame();
+}
+
+// ── Calibration ───────────────────────────────────────────────────────────
+let calActive = false;
+let calRole = 'follower';
+let calCurrentArm = 'follower';  // which arm is being calibrated now (for "both" mode)
+const CAL_JOINTS = ['Shoulder pan', 'Shoulder lift', 'Elbow', 'Wrist pitch', 'Wrist roll'];
+let calJointDone = [];
+let calGripper = null;
+
+function buildCalUI() {
+  const steps = document.getElementById('cal-steps-ui');
+  const armLabel = calActive && calRole === 'both' ? calCurrentArm.toUpperCase() : (calActive ? calRole.toUpperCase() : '');
+  steps.innerHTML = (armLabel ? `<div style="font-size:10px;color:var(--accent);margin-bottom:6px">${armLabel}</div>` : '')
+    + CAL_JOINTS.map((name, i) => `
+    <div class="cal-step">
+      <div class="cal-num ${calJointDone.includes(i) ? 'done' : ''}" id="csn${i}">
+        ${calJointDone.includes(i) ? '✓' : i + 1}
+      </div>
+      <div>
+        <div class="cal-text">${name}</div>
+        <div class="cal-sub" id="css${i}">${calJointDone.includes(i) ? 'Done' : 'Waiting...'}</div>
+      </div>
+    </div>`).join('');
+  // Gripper step
+  const gripDone = calGripper !== null;
+  steps.innerHTML += `
+    <div class="cal-step">
+      <div class="cal-num ${gripDone ? 'done' : ''}" id="csng">${gripDone ? '✓' : '6'}</div>
+      <div>
+        <div class="cal-text">Gripper</div>
+        <div class="cal-sub" id="cssg">${gripDone ? `open=${calGripper.open} close=${calGripper.closed}` : 'Waiting...'}</div>
+      </div>
+    </div>`;
+  const pct = calGripper !== null ? 100 : (calJointDone.length / CAL_JOINTS.length * 100);
+  document.getElementById('cal-pfill').style.width = Math.max(0, pct) + '%';
+  document.getElementById('cal-plabel').textContent = calGripper !== null ? '6 / 6 complete' : (calJointDone.length + ' / 5 complete');
+
+  const btn = document.getElementById('cal-btn');
+  btn.textContent = calActive ? 'CALIBRATING...' : (calGripper !== null ? 'CALIBRATION DONE' : 'START AUTO CALIBRATION');
+  btn.disabled = calActive;
+}
+
+function doCalStep() {
+  if (calActive) return;
+  const sel = document.getElementById('cal-arm-select');
+  calRole = sel.value;
+  calCurrentArm = calRole === 'both' ? 'follower' : calRole;
+  calJointDone = [];
+  calGripper = null;
+  calActive = true;
+  document.getElementById('cal-estop-btn').style.display = 'inline-block';
+  setMode('CALIBRATING');
+  buildCalUI();
+  const msg = { cmd: 'auto_calibrate', role: calRole };
+  if (calRole !== 'both') msg.port = calRole === 'leader' ? '/dev/ttyACM0' : '/dev/ttyACM1';
+  send(msg);
+  addLog('Auto-calibration started: ' + calRole);
+}
+
+function doCalEStop() {
+  send({ cmd: 'cal_estop' });
+  addLog('E‑stop sent (stopping calibration...)', 'warn');
+}
+
+function onCalProgress(m) {
+  if (m.role) calCurrentArm = m.role;
+  const roleLabel = m.role ? m.role.toUpperCase() + ' ' : '';
+  if (m.phase === 'start') {
+    const stepEl = document.getElementById('csn' + m.joint);
+    if (stepEl) stepEl.textContent = '↻';
+    addLog(roleLabel + 'Calibrating ' + m.name + '...');
+  }
+  if (m.phase === 'done' && m.joint !== undefined) {
+    calJointDone.push(m.joint);
+    const sub = document.getElementById('css' + m.joint);
+    if (sub) sub.textContent = `[${m.lo}°, ${m.hi}°]`;
+    addLog(roleLabel + m.name + ': [' + m.lo + '°, ' + m.hi + '°]');
+  }
+  buildCalUI();
+}
+
+function onCalDone(m) {
+  if (m.aborted) {
+    calActive = false;
+    document.getElementById('cal-estop-btn').style.display = 'none';
+    setMode('IDLE');
+    const reason = m.error ? m.error : 'E‑stop';
+    addLog('Calibration aborted: ' + reason, 'warn');
+    buildCalUI();
+    return;
+  }
+  // "Both" mode: follower finished, leader is still running in the same thread
+  if (calRole === 'both' && m.role === 'follower') {
+    calJointDone = [];
+    calGripper = null;
+    addLog('Follower calibrated — now calibrating leader...');
+    buildCalUI();
+    return;
+  }
+  calActive = false;
+  document.getElementById('cal-estop-btn').style.display = 'none';
+  calGripper = m.gripper;
+  setMode('IDLE');
+  const roleLabel = m.role ? m.role.toUpperCase() + ' ' : '';
+  // Update limits display
+  document.getElementById('limits-ui').innerHTML = JOINTS.map((j, i) => `
+    <div class="joint-row">
+      <div class="joint-label" style="font-size:10px">${j.name}</div>
+      <input type="number" value="${m.limits[i][0]}" style="width:52px;font-size:11px;padding:3px 6px">
+      <span style="font-size:10px;color:var(--muted)">to</span>
+      <input type="number" value="${m.limits[i][1]}" style="width:52px;font-size:11px;padding:3px 6px">
+      <span style="font-size:10px;color:var(--muted)">°</span>
+    </div>`).join('');
+  buildCalUI();
+  addLog(roleLabel + 'Calibration complete!');
+  if (calRole === 'both') addLog('Both arms calibrated!');
+}
+function resetCal() { calJointDone = []; calGripper = null; calActive = false; calCurrentArm = 'follower'; document.getElementById('cal-estop-btn').style.display = 'none'; buildCalUI(); setMode('IDLE'); send({cmd:'reset_calibration'}); addLog('Calibration and config reset', 'warn'); }
+
+// ── Settings ──────────────────────────────────────────────────────────────
+function saveConfig() {
+  send({ cmd: 'save_config', config: {
+    ROBOT_TYPE: document.getElementById('cfg-robot-type').value,
+    DATASET_DIR: document.getElementById('cfg-dataset-dir').value,
+  }});
+}
+function applyConfig(d) {
+  if (d.ROBOT_TYPE) document.getElementById('cfg-robot-type').value = d.ROBOT_TYPE;
+  if (d.DATASET_DIR) document.getElementById('cfg-dataset-dir').value = d.DATASET_DIR;
+}
+function pushToHub() { send({ cmd: 'push_to_hub', repo: document.getElementById('hf-repo').value }); }
+
+// ── Logging ───────────────────────────────────────────────────────────────
+const logBuf = [];
+function addLog(msg, level = 'info') {
+  const ts = new Date().toLocaleTimeString('en', { hour12: false });
+  logBuf.push({ ts, msg, level });
+  if (logBuf.length > 200) logBuf.shift();
+  const el = document.getElementById('log-area');
+  if (!el) return;
+  el.innerHTML = logBuf.slice(-30).map(l => {
+    const cls = l.level === 'warn' ? 'log-warn' : l.level === 'err' ? 'log-err' : '';
+    return `<span><span class="log-ts">${l.ts}</span><span class="${cls}">${l.msg}</span></span>\n`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Mode badge ────────────────────────────────────────────────────────────
+function setMode(m) {
+  const el = document.getElementById('mode-badge');
+  el.textContent = m;
+  el.className = 'badge ' + m.toLowerCase();
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.textContent.trim().toLowerCase() === name) t.classList.add('active');
+  });
+}
+
+// ── Teleop ─────────────────────────────────────────────────────────────────
+let teleopActive = false;
+
+function buildTeleopUI() {
+  document.getElementById('leader-joints-ui').innerHTML = JOINTS.map((j, i) => `
+    <div class="joint-row">
+      <div class="joint-label">${j.name}</div>
+      <div class="joint-val" id="tljv${i}">—</div>
+    </div>`).join('');
+  document.getElementById('follower-joints-ui').innerHTML = JOINTS.map((j, i) => `
+    <div class="joint-row">
+      <div class="joint-label">${j.name}</div>
+      <div class="joint-val" id="tfjv${i}">—</div>
+    </div>`).join('');
+}
+
+function startTeleop() {
+  if (teleopActive) return;
+  const leaderPort = document.getElementById('teleop-leader-port').value;
+  const followerPort = document.getElementById('teleop-follower-port').value;
+  send({ cmd: 'start_teleop', leader_port: leaderPort, follower_port: followerPort });
+  addLog('Starting teleop: leader=' + leaderPort + ' follower=' + followerPort);
+}
+
+function stopTeleop() {
+  if (!teleopActive) return;
+  send({ cmd: 'stop_teleop' });
+  addLog('Teleop stopped');
+}
+
+function setTeleopStatus(active) {
+  teleopActive = active;
+  const badge = document.getElementById('teleop-status-badge');
+  const text = document.getElementById('teleop-status-text');
+  if (active) {
+    badge.textContent = 'ACTIVE';
+    badge.className = 'badge running';
+    text.textContent = 'Teleop running';
+  } else {
+    badge.textContent = 'INACTIVE';
+    badge.className = 'badge idle';
+    text.textContent = 'Not running';
+  }
+}
+
+function onTeleopStarted(m) {
+  setTeleopStatus(true);
+  addLog('TELEOP started: ' + (m.msg || ''));
+}
+
+function onTeleopStopped(m) {
+  setTeleopStatus(false);
+  addLog('TELEOP stopped: ' + (m.msg || ''));
+}
+
+// ── Hand Tracking ──────────────────────────────────────────────────────────
+function toggleHandTracking() {
+  if (!handTrackingRunning) {
+    const cam = document.getElementById('hand-cam-sel').value;
+    send({ cmd: 'start_hand_tracking', camera: parseInt(cam) });
+  } else {
+    send({ cmd: 'stop_hand_tracking' });
+  }
+}
+
+function setHandTrackingStatus(running) {
+  handTrackingRunning = running;
+  const btn = document.getElementById('hand-start-btn');
+  const status = document.getElementById('hand-status');
+  const img = document.getElementById('hand-cam-img');
+  if (running) {
+    btn.textContent = 'STOP HAND TRACKING';
+    btn.className = 'btn danger';
+    status.textContent = 'RUNNING';
+    status.style.color = 'var(--accent)';
+    img.src = 'http://' + MJPEG_HOST + ':' + MJPEG_PORT + '/cam/hand';
+    img.style.display = 'block';
+  } else {
+    btn.textContent = 'START HAND TRACKING';
+    btn.className = 'btn primary';
+    status.textContent = 'STOPPED';
+    status.style.color = 'var(--muted)';
+    img.src = '';
+    img.style.display = 'none';
+    ['j0','j1','j2','j3','j4','gripper'].forEach(id => {
+      const el = document.getElementById('hand-' + id);
+      if (el) el.textContent = '—';
+    });
+  }
+}
+
+// ── Voice Control ─────────────────────────────────────────────────────────
+function startVoiceRecord() {
+  if (voiceRecording) return;
+  voiceRecording = true;
+  document.getElementById('voice-ptt-btn').textContent = '🔴 RELEASE TO STOP';
+  document.getElementById('voice-ptt-btn').className = 'btn danger';
+  document.getElementById('voice-status').textContent = 'LISTENING';
+  document.getElementById('voice-status').style.color = 'var(--accent)';
+  send({ cmd: 'voice_start_record' });
+}
+
+function stopVoiceRecord() {
+  if (!voiceRecording) return;
+  voiceRecording = false;
+  document.getElementById('voice-ptt-btn').textContent = '🎤 HOLD TO TALK';
+  document.getElementById('voice-ptt-btn').className = 'btn primary';
+  document.getElementById('voice-status').textContent = 'PROCESSING...';
+  send({ cmd: 'voice_stop_record' });
+}
+
+function setVoiceStatus(status) {
+  document.getElementById('voice-status').textContent = status || 'READY';
+  document.getElementById('voice-status').style.color = status === 'READY' ? 'var(--muted)' : status === 'LISTENING' ? 'var(--accent)' : '#f44';
+  if (status === 'READY') {
+    document.getElementById('voice-ptt-btn').textContent = '🎤 HOLD TO TALK';
+    document.getElementById('voice-ptt-btn').className = 'btn primary';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+buildJointsUI();
+buildMetrics();
+buildCalUI();
+buildTeleopUI();
+addLog('SO-101 GUI loaded. Click CONNECT BRIDGE to start.');
+addLog('Bridge expected at ' + WS_URL);
+
+// Auto-connect if running locally
+setTimeout(() => connectWS(), 500);
+</script>
+</body>
+</html>

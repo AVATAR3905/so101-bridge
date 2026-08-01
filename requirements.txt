@@ -1,0 +1,24 @@
+# SO-101 Bridge dependencies
+# Install with: pip install -r requirements.txt
+
+# WebSocket server
+websockets>=12.0
+
+# HTTP server for MJPEG camera streaming
+aiohttp>=3.9.0
+
+# Camera capture (install system package if pip fails: sudo apt install python3-opencv)
+opencv-python-headless>=4.9.0
+
+# Numerical
+numpy>=1.26.0
+
+# Feetech servo SDK (hardware communication layer used by lerobot)
+feetech-servo-sdk==1.0.0
+
+# lerobot is expected to already be installed.
+# If not: pip install lerobot  (or: pip install git+https://github.com/huggingface/lerobot.git)
+# lerobot
+
+# MuJoCo physics simulation (optional — skips 3D window on headless systems)
+# pip install mujoco

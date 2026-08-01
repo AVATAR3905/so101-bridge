@@ -1,0 +1,22 @@
+# Virtual env
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+logs/
+*.log
+
+# Recordings / datasets
+recordings/
+datasets/
+MUJOCO_LOG.TXT
+
+# OS
+.DS_Store
+
+# Local calibration (hardware-specific)
+*.local.json
